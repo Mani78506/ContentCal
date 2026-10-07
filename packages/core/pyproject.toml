@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contentcal-core"
+version = "0.1.0"
+description = "Shared core package for ContentCal: models, schemas, services, social providers, job queue"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<0.119",
+    "uvicorn[standard]>=0.30,<0.35",
+    "sqlalchemy[asyncio]>=2.0.36,<2.1",
+    "asyncpg>=0.30,<0.31",
+    "alembic>=1.14,<1.17",
+    "pydantic>=2.9,<2.12",
+    "pydantic-settings>=2.6,<2.11",
+    "email-validator>=2.2,<3",
+    "pyjwt>=2.10,<2.11",
+    "argon2-cffi>=23.1,<25",
+    "cryptography>=43,<46",
+    "redis>=5.2,<6",
+    "arq>=0.26,<0.27",
+    "httpx>=0.28,<0.29",
+    "python-multipart>=0.0.19,<0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<0.27",
+    "aiosqlite>=0.20,<0.21",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["../../tests"]
