@@ -1,82 +1,108 @@
 # Deploying to Railway
 
-Railway runs the full stack: web, api, worker, PostgreSQL, Redis.
-Total: 3 services + 2 plugins from this one repo.
+Four services total: **web**, **api**, **worker**, plus PostgreSQL and Redis
+plugins. API and worker build from deterministic Dockerfiles (no Railpack
+guessing games in a mixed-language monorepo).
 
 > Demo caveat: uploaded media lives on service-local disk and is wiped on
 > redeploys. Acceptable for a demo; move to S3/R2 before anything real.
 
-## 0. One-time
+## 1. Create project + plugins
 
-1. Push this repo to GitHub (done).
-2. In Railway: **New Project → Deploy from GitHub repo** → pick `ContentCal`.
-
-## 1. Plugins
-
-- **Add → Database → PostgreSQL** → after creation, copy its `DATABASE_URL`
-  reference as `${{Postgres.DATABASE_URL}}`.
-- **Add → Database → Redis** (`glitch-visualizer/redis` plugin or managed
-  Key Value) → reference `${{Redis.REDIS_URL}}`.
+1. Railway → **New Project → Deploy from GitHub repo** → `ContentCal`
+2. **+ New → Database → Add PostgreSQL**
+3. **+ New → Database → Add Redis**
 
 ## 2. API service
 
+Use the repo service Railway created (or **+ New → GitHub Repo**). In
+**Settings**:
+
 | Setting | Value |
 |---|---|
-| Root Directory | *(repo root — leave empty)* |
-| Build Command | `pip install -e "packages/core"` |
-| Start Command | `python -m uvicorn app.main:app --app-dir apps/api --host 0.0.0.0 --port $PORT` |
+| Root Directory | `/` *(repo root — must see packages/core)* |
+| Builder | **Dockerfile** |
+| Dockerfile Path | `infra/docker/api.Dockerfile` |
 
-Variables:
+**Variables**:
 
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
-JWT_SECRET_KEY=<generate: python -c "import secrets;print(secrets.token_urlsafe(64))">
-TOKEN_ENCRYPTION_KEY=<generate 64 hex chars>
 COOKIE_SECURE=true
 ENVIRONMENT=production
 MEDIA_STORAGE_DIR=/tmp/media
 ```
 
-**Then run migrations once** (Railway → API service → three-dot menu →
-"Run a command"… or from your machine against the plugin URL):
+Generate two secrets locally and add them:
 
 ```bash
-DATABASE_URL=<railway postgres url> alembic upgrade head
+python -c "import secrets; print(secrets.token_urlsafe(64))"   # JWT_SECRET_KEY
+python -c "import secrets; print(secrets.token_hex(32))"       # TOKEN_ENCRYPTION_KEY
 ```
+
+**Networking tab → Generate Domain** — remember this API URL.
 
 ## 3. Worker service
 
+**+ New → GitHub Repo → ContentCal** (second service from the same repo):
+
 | Setting | Value |
 |---|---|
-| Root Directory | *(repo root)* |
-| Build Command | `pip install -e "packages/core"` |
-| Start Command | `cd apps/worker && arq worker.main.WorkerSettings` |
+| Root Directory | `/` |
+| Builder | **Dockerfile** |
+| Dockerfile Path | `infra/docker/worker.Dockerfile` |
 
-Variables: same as the API (`DATABASE_URL`, `REDIS_URL`, `MEDIA_STORAGE_DIR=/tmp/media`, token key, etc.). No public domain needed.
+Variables: same as API (`DATABASE_URL`, `REDIS_URL`, `MEDIA_STORAGE_DIR`,
+both secrets). **No domain needed.**
 
 ## 4. Web service
 
-Root Directory `apps/web` — `apps/web/railway.toml` carries the rest.
+**+ New → GitHub Repo → ContentCal** (third service):
 
-Variables:
+| Setting | Value |
+|---|---|
+| Root Directory | `apps/web` |
+
+`apps/web/railway.toml` provides build (`npm ci && npm run build`) and start
+(`npm start`) automatically. **Variables**:
 
 ```
-API_INTERNAL_URL=${{api.RAILWAY_PRIVATE_DOMAIN}}   # private networking to the API service
-# or the API's public https://<api>.up.railway.app — private domain is faster/free
-NODE_ENV=production
+API_INTERNAL_URL=${{api.RAILWAY_PRIVATE_DOMAIN}}
+```
+(Type `${{` in the value field — Railway offers each service's references.
+If that's fiddly, use the API's public `https://<api>.up.railway.app` instead.)
+
+**Networking → Generate Domain** — this is your public app URL.
+
+## 5. Migrations (once)
+
+After Postgres is created, from your PC:
+
+```powershell
+# Railway → Postgres plugin → Connect tab → copy the public URL
+$env:DATABASE_URL="postgresql+asyncpg://postgres:<pw>@<host>:<port>/railway"
+.venv\Scripts\alembic upgrade head
 ```
 
-## 5. After deploy
+## 6. Verify
 
-1. Open the web service domain → register → connect a dev account.
-2. Schedule a post 2 minutes out → watch it flip to **published** on the
-   calendar (the worker + Redis do this for real on Railway).
-3. **Settings → Publishing pipeline** shows the job and its attempt.
+1. Web URL → **Register** → dashboard loads.
+2. **Accounts → Connect dev account**.
+3. Create a post, schedule it **2 minutes out** → it flips to **Published**
+   by itself (proves worker + Redis).
+4. **Settings → Publishing pipeline** shows the job + attempt.
 
-## Why cookies "just work" here
+## Trouble signs
 
-The browser only talks to the web service. Next.js rewrites proxy `/api/*`
-server-side to the API over Railway's private network, so auth cookies are
-first-party on your web domain — no CORS or `COOKIE_DOMAIN` gymnastics.
-`COOKIE_SECURE=true` is correct because Railway serves HTTPS.
+| Symptom | Fix |
+|---|---|
+| Build fails instantly with "no start command" | You're on Railpack at repo root — switch Builder to **Dockerfile** (step 2/3) |
+| API 500 on register | Migrations not run (step 5), or `DATABASE_URL` reference unset |
+| Web loads, login spins | `API_INTERNAL_URL` unresolved — use the public API URL |
+| Worker restarts | `REDIS_URL`/`DATABASE_URL` references missing |
+
+## Why cookies just work
+
+The browser only talks to the web service; Next.js rewrites proxy `/api/*`
+server-side over Railway's private network → first-party cookies, no CORS.
