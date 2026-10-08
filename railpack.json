@@ -1,5 +1,11 @@
 {
   "$schema": "https://schema.railpack.com",
+  "steps": {
+    "install": {
+      "inputs": ["...", { "local": true, "include": ["packages/core"] }],
+      "commands": ["...", "pip install ./packages/core"]
+    }
+  },
   "deploy": {
     "startCommand": "sh scripts/railway_start.sh"
   }
