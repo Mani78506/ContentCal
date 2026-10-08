@@ -1,9 +1,0 @@
-# Railpack config (repo root). Applies to the API and worker services —
-# the role is chosen by the ROLE env var inside scripts/railway_start.sh.
-# The web service (root dir apps/web) is unaffected by this file.
-
-[build]
-# Railpack already detects Python + pip via requirements.txt; nothing extra needed.
-
-[deploy]
-startCommand = "sh scripts/railway_start.sh"
