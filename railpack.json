@@ -2,7 +2,7 @@
   "$schema": "https://schema.railpack.com",
   "steps": {
     "install": {
-      "inputs": ["...", { "local": true, "include": ["packages/core"] }],
+      "inputs": ["...", { "local": true, "include": ["packages"] }],
       "commands": ["...", "pip install ./packages/core"]
     }
   },
