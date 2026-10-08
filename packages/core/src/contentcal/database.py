@@ -23,7 +23,8 @@ def _masked_url(url: str) -> str:
         return f"<unparseable, begins: {url[:12]!r}>"
 
 
-log.info("DATABASE_URL → %s", _masked_url(settings.database_url))
+# WARNING level so it surfaces even before logging.basicConfig runs in the API process.
+log.warning("DATABASE_URL → %s", _masked_url(settings.database_url))
 
 engine = create_async_engine(settings.database_url, pool_pre_ping=True, pool_size=10, max_overflow=20)
 
