@@ -3,7 +3,10 @@ import { fileURLToPath } from "node:url";
 
 import type { NextConfig } from "next";
 
-const API_URL = process.env.API_INTERNAL_URL ?? "http://localhost:8010";
+// API_INTERNAL_URL may arrive without a scheme from host wiring
+// (e.g. Render's host:port service references) — normalize it.
+const rawApiUrl = process.env.API_INTERNAL_URL ?? "localhost:8010";
+const API_URL = rawApiUrl.startsWith("http") ? rawApiUrl : `http://${rawApiUrl}`;
 
 const nextConfig: NextConfig = {
   // Silence "workspace root" warning when a stray lockfile exists in %USERPROFILE%

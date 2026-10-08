@@ -53,8 +53,14 @@ def decode_token(token: str, expected_type: str = "access") -> uuid.UUID:
 
 
 def _fernet() -> Fernet:
-    digest = hashlib.sha256(bytes.fromhex(_settings.token_encryption_key)).digest()
-    return Fernet(base64.urlsafe_b64encode(digest))
+    key = _settings.token_encryption_key
+    # Accept 64-hex-char keys locally and any non-empty string from hosted
+    # secret generators (e.g. Render's generateValue).
+    try:
+        material = bytes.fromhex(key)
+    except ValueError:
+        material = key.encode()
+    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(material).digest()))
 
 
 def encrypt_secret(plaintext: str) -> str:

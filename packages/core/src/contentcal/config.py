@@ -44,8 +44,11 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def _must_be_async(cls, v: str) -> str:
-        if v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Render/Heroku-style URLs use postgres:// or postgresql:// —
+        # always normalize to the asyncpg driver.
+        for prefix in ("postgresql+psycopg2://", "postgresql://", "postgres://"):
+            if v.startswith(prefix):
+                return "postgresql+asyncpg://" + v[len(prefix):]
         return v
 
     @property

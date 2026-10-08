@@ -1,0 +1,92 @@
+# Render Blueprint — creates the full ContentCal stack in one click:
+#   Render Dashboard → New → Blueprint → select the ContentCal repo.
+#
+# Cost note: free web + free Postgres (90-day) work; the worker (~$7/mo
+# starter) and Redis Key Value (paid) have no free tier on Render.
+services:
+  # ---------- FastAPI ----------
+  - type: web
+    name: contentcal-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -e "packages/core"
+    startCommand: python -m uvicorn app.main:app --app-dir apps/api --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: contentcal-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: contentcal-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ENVIRONMENT
+        value: production
+      - key: MEDIA_STORAGE_DIR
+        value: /tmp/media
+
+  # ---------- Background worker (arq + scheduler) ----------
+  - type: worker
+    name: contentcal-worker
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -e "packages/core"
+    startCommand: cd apps/worker && arq worker.main.WorkerSettings
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: contentcal-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: contentcal-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: MEDIA_STORAGE_DIR
+        value: /tmp/media
+
+  # ---------- Next.js frontend ----------
+  - type: web
+    name: contentcal-web
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: apps/web
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /login
+    envVars:
+      - key: API_INTERNAL_URL
+        fromService:
+          type: web
+          name: contentcal-api
+          property: hostport   # bare host:port — next.config.ts adds http://
+      - key: NODE_ENV
+        value: production
+
+  # ---------- Redis (queue) ----------
+  - type: redis
+    name: contentcal-redis
+    plan: starter
+    region: oregon
+    ipAllowList: []
+
+databases:
+  - name: contentcal-db
+    plan: free

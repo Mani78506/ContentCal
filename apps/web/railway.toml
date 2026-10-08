@@ -1,7 +1,6 @@
 # Railway service config for the Next.js frontend.
 # In Railway: New Service → this repo → Root Directory = apps/web
 [build]
-builder = "NIXPACKS"
 buildCommand = "npm ci && npm run build"
 
 [deploy]
