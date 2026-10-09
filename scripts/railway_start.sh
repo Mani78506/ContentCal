@@ -14,4 +14,7 @@ if [ "$ROLE" = "worker" ]; then
   exec "$ARQ" worker.main.WorkerSettings
 fi
 
+# API service runs migrations before serving traffic — deploys self-heal the schema.
+"$PY" -m alembic upgrade head
+
 exec "$PY" -m uvicorn app.main:app --app-dir apps/api --host 0.0.0.0 --port "${PORT:-8000}"
