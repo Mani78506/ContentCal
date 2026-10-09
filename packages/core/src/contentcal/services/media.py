@@ -37,3 +37,22 @@ def new_storage_path(content_id: uuid.UUID, filename: str) -> tuple[Path, str]:
     absolute = storage_root() / rel
     absolute.parent.mkdir(parents=True, exist_ok=True)
     return absolute, str(rel).replace("\\", "/")
+
+
+def new_asset_path(workspace_id: uuid.UUID, filename: str) -> tuple[Path, str]:
+    """Media-library storage: assets/<workspace>/<uuid>_<name>."""
+    rel = Path("assets") / str(workspace_id) / f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
+    absolute = storage_root() / rel
+    absolute.parent.mkdir(parents=True, exist_ok=True)
+    return absolute, str(rel).replace("\\", "/")
+
+
+def new_design_path(workspace_id: uuid.UUID, design_id: uuid.UUID, ext: str) -> tuple[Path, str]:
+    """Rendered design export/thumbnail storage."""
+    ext = ext.lower().lstrip(".")
+    if ext not in ("png", "jpg", "jpeg", "webp"):
+        ext = "png"
+    rel = Path("designs") / str(workspace_id) / f"{design_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    absolute = storage_root() / rel
+    absolute.parent.mkdir(parents=True, exist_ok=True)
+    return absolute, str(rel).replace("\\", "/")

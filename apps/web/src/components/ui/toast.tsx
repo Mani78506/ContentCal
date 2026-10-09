@@ -67,16 +67,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 24, transition: { duration: 0.15 } }}
               transition={{ duration: 0.18 }}
-              className={cn("pointer-events-auto flex items-start gap-3 rounded-xl border bg-white p-3.5 shadow-lift", RING[t.kind])}
+              className={cn("pointer-events-auto flex items-start gap-3 rounded-xl border bg-white p-3.5 shadow-lift dark:bg-[#141926]", RING[t.kind])}
             >
               <span className="mt-0.5 shrink-0">{ICONS[t.kind]}</span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900">{t.title}</p>
-                {t.description && <p className="mt-0.5 text-sm text-gray-500">{t.description}</p>}
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{t.title}</p>
+                {t.description && <p className="mt-0.5 text-sm text-gray-500 dark:text-slate-400">{t.description}</p>}
               </div>
               <button
                 onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-800"
                 aria-label="Dismiss notification"
               >
                 <X className="h-4 w-4" />

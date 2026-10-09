@@ -7,6 +7,17 @@ from contentcal.models.jobs import (
 )
 from contentcal.models.scheduling import ScheduledPost, ScheduledPostStatus
 from contentcal.models.social import AccountStatus, SocialAccount, SocialProvider
+from contentcal.models.studio import (
+    ActivityLog,
+    AssetKind,
+    BrandKit,
+    Design,
+    DesignTemplate,
+    DesignVersion,
+    MediaAsset,
+    TemplateCategory,
+    TemplateFavorite,
+)
 from contentcal.models.user import User
 from contentcal.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
@@ -27,4 +38,13 @@ __all__ = [
     "PublishingJob",
     "PublishingAttempt",
     "JobStatus",
+    "DesignTemplate",
+    "TemplateCategory",
+    "TemplateFavorite",
+    "Design",
+    "DesignVersion",
+    "BrandKit",
+    "MediaAsset",
+    "AssetKind",
+    "ActivityLog",
 ]

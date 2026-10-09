@@ -139,3 +139,94 @@ export interface ProviderInfo {
   implemented: boolean;
   is_mock: boolean;
 }
+
+// ---------- Studio ----------
+
+export type TemplateCategory =
+  | "instagram" | "facebook" | "linkedin" | "youtube" | "x" | "pinterest"
+  | "promotional" | "festival" | "announcement" | "product_launch";
+
+export interface Template {
+  id: string;
+  workspace_id: string | null;
+  name: string;
+  category: TemplateCategory;
+  platform: string;
+  width: number;
+  height: number;
+  thumbnail_path: string | null;
+  is_builtin: boolean;
+  is_favorite: boolean;
+  last_used_at: string | null;
+  created_at: string;
+  canvas_json?: string | null;
+}
+
+export interface Design {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  canvas_json: string;
+  thumbnail_path: string | null;
+  export_path: string | null;
+  template_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DesignSummary {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  thumbnail_path: string | null;
+  export_path: string | null;
+  updated_at: string;
+}
+
+export interface DesignVersion {
+  id: string;
+  note: string;
+  width: number;
+  height: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type AssetKind = "library" | "brand_logo" | "brand_image";
+
+export interface LibraryAsset {
+  id: string;
+  kind: AssetKind;
+  folder: string;
+  file_name: string;
+  url: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface BrandKit {
+  id: string;
+  name: string;
+  colors: { name: string; hex: string }[];
+  fonts: { name: string; family: string }[];
+  is_default: boolean;
+  logos: LibraryAsset[];
+  images: LibraryAsset[];
+  created_at: string;
+}
+
+export interface ActivityItem {
+  id: number;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  entity_name: string;
+  details: Record<string, unknown>;
+  user_id: string | null;
+  user_name: string | null;
+  created_at: string;
+}

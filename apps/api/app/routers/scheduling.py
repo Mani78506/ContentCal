@@ -7,9 +7,10 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Query, Request, status
 
 from app import serializers
-from app.deps import SessionDep, WorkspaceCtx
+from app.deps import CurrentUser, SessionDep, WorkspaceCtx
 from contentcal.errors import ForbiddenError, ValidationAppError
 from contentcal.schemas.content import CalendarEvent, PublishNowRequest, RescheduleRequest, ScheduleRequest, ScheduledPostOut
+from contentcal.services import activity as activity_svc
 from contentcal.services import scheduling as svc
 from contentcal.services.content import get_content
 from contentcal.queue.arq_queue import try_enqueue
@@ -23,7 +24,7 @@ def _require_write(ctx) -> None:
 
 
 @router.post("/content/{content_id}/schedule", response_model=list[ScheduledPostOut], status_code=status.HTTP_201_CREATED)
-async def schedule(content_id: uuid.UUID, data: ScheduleRequest, request: Request, ctx: WorkspaceCtx, session: SessionDep):
+async def schedule(content_id: uuid.UUID, data: ScheduleRequest, request: Request, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     content = await get_content(session, ctx.workspace.id, content_id)
     posts = await svc.schedule_content(
@@ -31,6 +32,13 @@ async def schedule(content_id: uuid.UUID, data: ScheduleRequest, request: Reques
     )
     if not posts:
         raise ValidationAppError("All selected accounts already have a scheduled post for this content")
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="post_scheduled", entity_type="content", entity_id=content.id, entity_name=content.title,
+        details={"platforms": [sp.social_account.provider.value for sp in posts],
+                 "scheduled_at": data.scheduled_at.isoformat()},
+    )
+    await session.commit()
     return [serializers.scheduled_post_out(sp) for sp in posts]
 
 
@@ -54,18 +62,30 @@ async def get_post(post_id: uuid.UUID, ctx: WorkspaceCtx, session: SessionDep):
 
 
 @router.patch("/scheduled-posts/{post_id}", response_model=ScheduledPostOut)
-async def reschedule(post_id: uuid.UUID, data: RescheduleRequest, ctx: WorkspaceCtx, session: SessionDep):
+async def reschedule(post_id: uuid.UUID, data: RescheduleRequest, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     sp = await svc.reschedule_post(session, workspace_id=ctx.workspace.id, post_id=post_id, scheduled_at=data.scheduled_at)
     sp = await svc.get_scheduled_post(session, ctx.workspace.id, post_id)
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="post_rescheduled", entity_type="scheduled_post", entity_id=sp.id,
+        entity_name=sp.content.title, details={"scheduled_at": data.scheduled_at.isoformat()},
+    )
+    await session.commit()
     return serializers.scheduled_post_out(sp)
 
 
 @router.post("/scheduled-posts/{post_id}/cancel", response_model=ScheduledPostOut)
-async def cancel(post_id: uuid.UUID, ctx: WorkspaceCtx, session: SessionDep):
+async def cancel(post_id: uuid.UUID, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     await svc.cancel_post(session, workspace_id=ctx.workspace.id, post_id=post_id)
     sp = await svc.get_scheduled_post(session, ctx.workspace.id, post_id)
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="post_cancelled", entity_type="scheduled_post", entity_id=sp.id,
+        entity_name=sp.content.title if sp.content else "",
+    )
+    await session.commit()
     return serializers.scheduled_post_out(sp)
 
 

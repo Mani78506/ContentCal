@@ -8,6 +8,8 @@ from contentcal.config import get_settings
 from contentcal.errors import ForbiddenError, ValidationAppError
 from contentcal.models import ContentStatus
 from contentcal.schemas.content import ContentCreate, ContentOut, ContentUpdate, MediaOut
+from contentcal.schemas.studio import AttachAssetRequest
+from contentcal.services import activity as activity_svc
 from contentcal.services import content as svc
 from contentcal.services.media import new_storage_path, storage_root, validate_mime
 
@@ -36,6 +38,11 @@ async def list_content(
 async def create(data: ContentCreate, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     content = await svc.create_content(session, workspace_id=ctx.workspace.id, user_id=user.id, data=data)
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="post_created", entity_type="content", entity_id=content.id, entity_name=content.title,
+    )
+    await session.commit()
     return serializers.content_out(content)
 
 
@@ -46,9 +53,14 @@ async def get_one(content_id: uuid.UUID, ctx: WorkspaceCtx, session: SessionDep)
 
 
 @router.patch("/{content_id}", response_model=ContentOut)
-async def update(content_id: uuid.UUID, data: ContentUpdate, ctx: WorkspaceCtx, session: SessionDep):
+async def update(content_id: uuid.UUID, data: ContentUpdate, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     content = await svc.update_content(session, workspace_id=ctx.workspace.id, content_id=content_id, data=data)
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="post_edited", entity_type="content", entity_id=content.id, entity_name=content.title,
+    )
+    await session.commit()
     return serializers.content_out(content)
 
 
@@ -59,7 +71,7 @@ async def delete(content_id: uuid.UUID, ctx: WorkspaceCtx, session: SessionDep):
 
 
 @router.post("/{content_id}/media", response_model=MediaOut, status_code=status.HTTP_201_CREATED)
-async def upload_media(content_id: uuid.UUID, file: UploadFile, ctx: WorkspaceCtx, session: SessionDep):
+async def upload_media(content_id: uuid.UUID, file: UploadFile, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
     _require_write(ctx)
     content = await svc.get_content(session, ctx.workspace.id, content_id)
     mime = file.content_type or "application/octet-stream"
@@ -79,6 +91,41 @@ async def upload_media(content_id: uuid.UUID, file: UploadFile, ctx: WorkspaceCt
     media = await svc.add_media(
         session, content=content, file_name=file.filename or "upload", file_path=rel, mime_type=mime, size_bytes=len(data)
     )
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="media_uploaded", entity_type="content_media", entity_id=media.id,
+        entity_name=media.file_name, details={"content_id": str(content.id), "mime": mime},
+    )
+    await session.commit()
+    return media
+
+
+@router.post("/{content_id}/media/from-asset", response_model=MediaOut, status_code=status.HTTP_201_CREATED)
+async def attach_asset(content_id: uuid.UUID, data: AttachAssetRequest, ctx: WorkspaceCtx, user: CurrentUser, session: SessionDep):
+    """Attach a media-library asset to a content item (file is copied, not shared)."""
+    _require_write(ctx)
+    from contentcal.services import assets as asset_svc
+
+    content = await svc.get_content(session, ctx.workspace.id, content_id)
+    asset = await asset_svc.get_asset(session, ctx.workspace.id, data.asset_id)
+    if len(content.media) >= 10:
+        raise ValidationAppError("A content item can hold at most 10 media files")
+    src = storage_root() / asset.file_path
+    if not src.exists():
+        raise ValidationAppError("Asset file is missing from storage")
+    payload = src.read_bytes()
+    absolute, rel = new_storage_path(content.id, asset.file_name)
+    absolute.write_bytes(payload)
+    media = await svc.add_media(
+        session, content=content, file_name=asset.file_name, file_path=rel,
+        mime_type=asset.mime_type, size_bytes=asset.size_bytes,
+    )
+    await activity_svc.log_activity(
+        session, workspace_id=ctx.workspace.id, user_id=user.id,
+        action="media_uploaded", entity_type="content_media", entity_id=media.id,
+        entity_name=media.file_name, details={"content_id": str(content.id), "from_asset": str(asset.id)},
+    )
+    await session.commit()
     return media
 
 

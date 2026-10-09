@@ -1,7 +1,7 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { CalendarClock, CloudUpload, Film, Loader2, Rocket, Save, X } from "lucide-react";
+import { CalendarClock, CloudUpload, Film, FolderOpen, Loader2, Rocket, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useMemo, useRef, useState } from "react";
 import useSWR from "swr";
@@ -11,9 +11,11 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError, swrFetcher } from "@/lib/api";
-import type { ContentItem, ContentStatus, MediaItem, ScheduledPost, SocialAccount } from "@/lib/types";
+import { libraryApi } from "@/lib/studio";
+import type { ContentItem, ContentStatus, LibraryAsset, MediaItem, ScheduledPost, SocialAccount } from "@/lib/types";
 import { cn, formatBytes } from "@/lib/utils";
 
 function draftStatus(status: ContentStatus | undefined): boolean {
@@ -38,6 +40,7 @@ export function ContentEditor({ workspaceId, contentId }: { workspaceId: string;
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [busy, setBusy] = useState<"save" | "schedule" | "publish" | "upload" | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // hydrate form when existing content arrives
@@ -182,7 +185,15 @@ export function ContentEditor({ workspaceId, contentId }: { workspaceId: string;
         </Card>
 
         <Card>
-          <CardHeader title="Media" subtitle="JPEG, PNG, WebP, GIF, MP4, MOV, WebM — up to 10 files" />
+          <CardHeader
+            title="Media"
+            subtitle="JPEG, PNG, WebP, GIF, MP4, MOV, WebM — up to 10 files"
+            action={
+              <Button variant="outline" size="sm" icon={<FolderOpen className="h-4 w-4" />} onClick={() => setLibraryOpen(true)}>
+                From library
+              </Button>
+            }
+          />
           <div className="p-5">
             <div
               onDragOver={(e) => e.preventDefault()}
@@ -335,6 +346,79 @@ export function ContentEditor({ workspaceId, contentId }: { workspaceId: string;
           </Card>
         )}
       </div>
+
+      <LibraryPicker
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        workspaceId={workspaceId}
+        onPick={async (assetId) => {
+          const cid = id ?? (await ensureDraft());
+          await libraryApi.attachToContent(workspaceId, cid, assetId);
+          await mutate();
+          if (!contentId) router.replace(`/content/${cid}`);
+          toast.success("Attached to post");
+        }}
+      />
     </div>
+  );
+}
+
+function LibraryPicker({
+  open,
+  onClose,
+  workspaceId,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  workspaceId: string;
+  onPick: (assetId: string) => Promise<void>;
+}) {
+  const toast = useToast();
+  const [picking, setPicking] = useState<string | null>(null);
+  const { data } = useSWR(open ? `lib-picker:${workspaceId}` : null, () => libraryApi.list(workspaceId));
+
+  return (
+    <Modal open={open} onClose={onClose} title="Media library" width="max-w-2xl">
+      {!data ? (
+        <p className="py-8 text-center text-sm text-gray-400">Loading…</p>
+      ) : data.items.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-400">
+          Library is empty — upload files on the{" "}
+          <a href="/media" className="text-brand-600 hover:underline">Media</a> page or inside the Studio.
+        </p>
+      ) : (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {data.items.map((a) => (
+            <button
+              key={a.id}
+              disabled={picking === a.id}
+              onClick={async () => {
+                setPicking(a.id);
+                try {
+                  await onPick(a.id);
+                  onClose();
+                } catch (e) {
+                  toast.error("Couldn't attach", e instanceof Error ? e.message : undefined);
+                } finally {
+                  setPicking(null);
+                }
+              }}
+              className="group overflow-hidden rounded-xl border border-gray-200 text-left transition-all hover:border-brand-400 hover:shadow-soft dark:border-slate-700"
+            >
+              {a.mime_type.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.url} alt={a.file_name} className="aspect-square w-full object-cover" />
+              ) : (
+                <div className="flex aspect-square w-full items-center justify-center bg-gray-100 text-gray-400 dark:bg-slate-800">
+                  <Film className="h-7 w-7" />
+                </div>
+              )}
+              <p className="truncate px-2 py-1.5 text-xs text-gray-600 dark:text-slate-300">{a.file_name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }

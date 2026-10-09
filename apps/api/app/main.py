@@ -17,7 +17,7 @@ from contentcal.errors import AppError
 from contentcal.queue import ArqJobQueue
 from contentcal.services.media import storage_root
 
-from app.routers import accounts, auth, content, dashboard, jobs, scheduling, workspaces
+from app.routers import accounts, auth, content, dashboard, jobs, library, scheduling, studio, workspaces
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("contentcal.api")
@@ -30,6 +30,15 @@ async def lifespan(app: FastAPI):
     queue = ArqJobQueue()
     app.state.queue = queue
     log.info("ContentCal API starting (environment=%s)", settings.environment)
+    try:
+        from contentcal.database import SessionFactory
+        from contentcal.seed_templates import seed_builtin_templates
+        async with SessionFactory() as session:
+            seeded = await seed_builtin_templates(session)
+            if seeded:
+                log.info("Seeded %d built-in templates", seeded)
+    except Exception:
+        log.exception("Template seeding failed (non-fatal)")
     yield
     await queue.close()
 
@@ -76,3 +85,5 @@ app.include_router(scheduling.router, prefix=PREFIX)
 app.include_router(accounts.router, prefix=PREFIX)
 app.include_router(jobs.router, prefix=PREFIX)
 app.include_router(dashboard.router, prefix=PREFIX)
+app.include_router(studio.router, prefix=PREFIX)
+app.include_router(library.router, prefix=PREFIX)

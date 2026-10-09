@@ -27,6 +27,7 @@ from contentcal.models import (
 )
 from contentcal.models.base import utcnow
 from contentcal.providers import ProviderNotImplementedError, PublishRequest, get_provider
+from contentcal.services.activity import log_activity
 from contentcal.services.scheduling import _rollup
 
 log = logging.getLogger(__name__)
@@ -74,6 +75,11 @@ async def execute_job(session: AsyncSession, job: PublishingJob) -> JobStatus:
         started_at=utcnow(),
     )
     session.add(attempt)
+    await log_activity(
+        session, workspace_id=sp.content.workspace_id, user_id=sp.content.created_by,
+        action="publish_started", entity_type="scheduled_post", entity_id=sp.id,
+        entity_name=sp.content.title, details={"job_id": str(job.id), "provider": account.provider.value},
+    )
 
     try:
         provider = get_provider(account.provider)
@@ -108,6 +114,12 @@ async def execute_job(session: AsyncSession, job: PublishingJob) -> JobStatus:
         sp.platform_post_url = result.platform_post_url
         sp.error = None
         await _rollup(session, sp.content)
+        await log_activity(
+            session, workspace_id=sp.content.workspace_id, user_id=sp.content.created_by,
+            action="publish_succeeded", entity_type="scheduled_post", entity_id=sp.id,
+            entity_name=sp.content.title,
+            details={"provider": account.provider.value, "url": result.platform_post_url},
+        )
         await session.commit()
         return job.status
     return await _finish(session, job, sp, attempt, success=False, retryable=result.retryable, error=result.error)
@@ -138,6 +150,12 @@ async def _finish(
         sp.status = ScheduledPostStatus.FAILED
         sp.error = error
     await _rollup(session, sp.content)
+    await log_activity(
+        session, workspace_id=sp.content.workspace_id, user_id=sp.content.created_by,
+        action="publish_failed", entity_type="scheduled_post", entity_id=sp.id,
+        entity_name=sp.content.title,
+        details={"provider": sp.social_account.provider.value, "error": error, "retrying": job.status == JobStatus.PENDING},
+    )
     job.locked_at = None
     job.locked_by = None
     await session.commit()

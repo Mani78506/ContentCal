@@ -48,12 +48,12 @@ export function Modal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98, transition: { duration: 0.12 } }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className={cn("max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-lift sm:rounded-2xl", width)}
+            className={cn("max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-lift dark:bg-[#141926] sm:rounded-2xl", width)}
             onClick={(e) => e.stopPropagation()}
           >
             {title !== undefined && (
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
-                <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4 dark:border-slate-700/60 dark:bg-[#141926]">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">{title}</h2>
                 <button
                   onClick={onClose}
                   className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"

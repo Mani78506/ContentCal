@@ -11,10 +11,12 @@ type Size = "sm" | "md" | "lg";
 const variants: Record<Variant, string> = {
   primary:
     "bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-500 disabled:bg-brand-300",
-  secondary: "bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-400 disabled:text-gray-400",
+  secondary:
+    "bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-400 disabled:text-gray-400 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
   outline:
-    "border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-400 disabled:text-gray-400",
-  ghost: "text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-400 disabled:text-gray-400",
+    "border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-400 disabled:text-gray-400 dark:border-slate-700 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800",
+  ghost:
+    "text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-400 disabled:text-gray-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
   danger: "bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500 disabled:bg-rose-300",
 };
 
