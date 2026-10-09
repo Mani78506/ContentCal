@@ -2,7 +2,7 @@
 
 import { CalendarClock, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,14 @@ export function ScheduleModal({
 
   const activeAccounts = (accounts ?? []).filter((a) => a.status === "active");
   const canSubmit = selected.size > 0 && (mode === "existing" ? !!existingId : !!title.trim());
+
+  // Pre-select every active account the first time the list loads —
+  // the user can deselect any they don't want before scheduling.
+  useEffect(() => {
+    if (open && accounts && selected.size === 0) {
+      setSelected(new Set(activeAccounts.map((a) => a.id)));
+    }
+  }, [accounts, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const minDate = useMemo(() => {
     const d = new Date(Date.now() + 5 * 60_000);
@@ -148,6 +156,7 @@ export function ScheduleModal({
               No connected accounts yet — connect one in Accounts first.
             </p>
           ) : (
+            <>
             <div className="grid grid-cols-2 gap-2">
               {activeAccounts.map((a) => (
                 <button
@@ -172,6 +181,10 @@ export function ScheduleModal({
                 </button>
               ))}
             </div>
+            {selected.size === 0 && (
+              <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">Click a platform above to select it.</p>
+            )}
+            </>
           )}
         </div>
 
