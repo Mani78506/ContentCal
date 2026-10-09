@@ -11,7 +11,7 @@ interface ThemeState {
   setTheme: (t: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeState>({ theme: "system", resolved: "light", setTheme: () => {} });
+const ThemeContext = createContext<ThemeState>({ theme: "light", resolved: "light", setTheme: () => {} });
 
 function apply(theme: Theme) {
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -21,11 +21,11 @@ function apply(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [resolved, setResolved] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const stored = (window.localStorage.getItem(KEY) as Theme) || "system";
+    const stored = (window.localStorage.getItem(KEY) as Theme) || "light";
     setThemeState(stored);
     setResolved(apply(stored));
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
