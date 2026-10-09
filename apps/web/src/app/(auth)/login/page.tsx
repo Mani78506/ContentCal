@@ -38,8 +38,8 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">Welcome back</h1>
-      <p className="mt-1.5 text-sm text-gray-500">Sign in to your workspace to keep the content flowing.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Welcome back</h1>
+      <p className="mt-1.5 text-sm text-gray-500 dark:text-slate-400">Sign in to your workspace to keep the content flowing.</p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
         {error && (
@@ -60,7 +60,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-gray-500 dark:text-slate-400">
         New to ContentCal?{" "}
         <Link href="/register" className="font-semibold text-brand-600 transition-colors hover:text-brand-700">
           Create your workspace

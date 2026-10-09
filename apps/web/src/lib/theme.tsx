@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark" | "system";
-const KEY = "contentcal.theme";
+const KEY = "contentcal.theme.v2";
 
 interface ThemeState {
   theme: Theme;

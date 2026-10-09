@@ -43,8 +43,8 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create your workspace</h1>
-      <p className="mt-1.5 text-sm text-gray-500">Your calendar, content, and channels — all in one place.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Create your workspace</h1>
+      <p className="mt-1.5 text-sm text-gray-500 dark:text-slate-400">Your calendar, content, and channels — all in one place.</p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
         {error && (
@@ -75,7 +75,7 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-gray-500 dark:text-slate-400">
         Already have an account?{" "}
         <Link href="/login" className="font-semibold text-brand-600 transition-colors hover:text-brand-700">
           Sign in
