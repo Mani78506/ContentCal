@@ -1,7 +1,7 @@
 # Railway service config for the Next.js frontend.
 # In Railway: New Service → this repo → Root Directory = apps/web
 [build]
-buildCommand = "npm ci && npm run build"
+buildCommand = "npm install --no-audit --no-fund && npm run build"
 
 [deploy]
 startCommand = "npm start"
